@@ -291,24 +291,6 @@ jobs:
           else
             echo "已选择无内置KernelSU模式，跳过KernelSU配置..."
           fi
-
-      - name: 修复 KernelSU 头文件路径
-        if: github.event.inputs.ksu_type == 'ksu'
-        run: |
-          cd kernel_workspace
-          echo "=== 检查目录结构 ==="
-          ls -la ./common/drivers/kernelsu || true
-          
-          # 添加编译头文件搜索路径
-          echo 'ccflags-y += -I$(srctree)/drivers/kernelsu/include' >> ./common/drivers/kernelsu/Makefile
-          # 添加 uapi 路径（KernelSU 的 uapi 目录位于内核源码树外）
-          echo 'ccflags-y += -I$(srctree)/../KernelSU/uapi' >> ./common/drivers/kernelsu/Makefile
-          
-          # 验证关键头文件是否存在
-          echo "=== 验证头文件 ==="
-          ls -la ./KernelSU/uapi/app_profile.h || echo "警告：app_profile.h 未找到"
-          ls -la ./common/drivers/kernelsu/include/klog.h || echo "警告：klog.h 未找到"
-          ls -la ./common/drivers/kernelsu/include/arch.h || echo "警告：arch.h 未找到"
       
       - name: 应用 KernelSU & SUSFS 补丁
         if: inputs.susfs_enable
@@ -657,6 +639,11 @@ jobs:
           KCFLAGS+=" -fdebug-prefix-map=$ROOT_REAL_PATH=."
           KCFLAGS+=" -fmacro-prefix-map=$ROOT_REAL_PATH=."
           KCFLAGS+=" -ffile-prefix-map=$ROOT_REAL_PATH=."
+          
+          # 添加 KernelSU 头文件搜索路径
+          KCFLAGS+=" -I$COMMON_REAL_PATH/drivers/kernelsu/include"
+          KCFLAGS+=" -I$COMMON_REAL_PATH/../KernelSU/uapi"
+          
           # 2. 声明Rust等工具（此处若不进行声明，内核编译前的Rust环境预检测脚本scripts/rust_is_available.sh会检测失败，导致内核无法正常开启Rust代码编译）
           export RUSTC="rustc"
           export BINDGEN="bindgen"
