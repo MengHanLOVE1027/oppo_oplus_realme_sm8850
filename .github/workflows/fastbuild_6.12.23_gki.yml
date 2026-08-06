@@ -301,19 +301,12 @@ jobs:
           
           # 添加编译头文件搜索路径
           echo 'ccflags-y += -I$(srctree)/drivers/kernelsu/include' >> ./common/drivers/kernelsu/Makefile
-          
-          # 处理 uapi 头文件（app_profile.h 位于 KernelSU/uapi）
-          if [ -d "./KernelSU/uapi" ]; then
-            # 若 common/include/uapi 不存在，创建软链接指向 KernelSU/uapi
-            if [ ! -e "./common/include/uapi" ]; then
-              ln -sf ../KernelSU/uapi ./common/include/uapi
-              echo "已创建 uapi 软链接"
-            fi
-          fi
+          # 添加 uapi 路径（KernelSU 的 uapi 目录位于内核源码树外）
+          echo 'ccflags-y += -I$(srctree)/../KernelSU/uapi' >> ./common/drivers/kernelsu/Makefile
           
           # 验证关键头文件是否存在
           echo "=== 验证头文件 ==="
-          ls -la ./common/include/uapi/app_profile.h || echo "警告：app_profile.h 未找到"
+          ls -la ./KernelSU/uapi/app_profile.h || echo "警告：app_profile.h 未找到"
           ls -la ./common/drivers/kernelsu/include/klog.h || echo "警告：klog.h 未找到"
           ls -la ./common/drivers/kernelsu/include/arch.h || echo "警告：arch.h 未找到"
       
