@@ -296,13 +296,44 @@ jobs:
         if: github.event.inputs.ksu_type == 'ksu'
         run: |
           cd kernel_workspace
-          # 确保头文件复制到内核源码的 include 目录
-          cp -r ./KernelSU/include/* ./common/include/
-          # 或者如果 KernelSU 的 include 位于 drivers/kernelsu/include，则：
-          # cp -r ./KernelSU/drivers/kernelsu/include/* ./common/drivers/kernelsu/include/
-          # 同时确保编译时包含路径
+          echo "=== 检查 KernelSU 目录结构 ==="
+          ls -la ./KernelSU || true
+          echo "=== 开始修复头文件 ==="
+          
+          # 尝试从可能的位置复制头文件
+          # 1. 如果 KernelSU/kernel 存在，复制整个 kernel 目录到 drivers/kernelsu
+          if [ -d "./KernelSU/kernel" ]; then
+            echo "发现 KernelSU/kernel，复制到 common/drivers/kernelsu"
+            cp -rf ./KernelSU/kernel/* ./common/drivers/kernelsu/
+          fi
+          
+          # 2. 如果 KernelSU/include 存在，复制到 common/include
+          if [ -d "./KernelSU/include" ]; then
+            echo "发现 KernelSU/include，复制到 common/include"
+            cp -rf ./KernelSU/include/* ./common/include/
+          fi
+          
+          # 3. 如果 KernelSU/kernel/include 存在，复制到 common/include
+          if [ -d "./KernelSU/kernel/include" ]; then
+            echo "发现 KernelSU/kernel/include，复制到 common/include"
+            cp -rf ./KernelSU/kernel/include/* ./common/include/
+          fi
+          
+          # 4. 如果 KernelSU 根目录下直接有 include 但不在以上位置（例如符号链接），尝试拷贝
+          if [ -d "./KernelSU/include" ] && [ ! -L "./KernelSU/include" ]; then
+            echo "发现根目录 include，复制到 common/include"
+            cp -rf ./KernelSU/include/* ./common/include/
+          fi
+          
+          # 5. 确保编译时包含路径
+          echo "添加 ccflags-y 到 Makefile"
           echo 'ccflags-y += -I$(srctree)/include -I$(srctree)/drivers/kernelsu/include' >> ./common/drivers/kernelsu/Makefile
-
+          
+          # 6. 验证关键头文件是否存在
+          echo "=== 验证关键头文件 ==="
+          ls -la ./common/include/klog.h || echo "警告：klog.h 仍未找到"
+          ls -la ./common/include/arch.h || echo "警告：arch.h 仍未找到"
+          ls -la ./common/include/uapi/app_profile.h || echo "警告：app_profile.h 仍未找到"
       - name: 应用 KernelSU & SUSFS 补丁
         if: inputs.susfs_enable
         run: |
