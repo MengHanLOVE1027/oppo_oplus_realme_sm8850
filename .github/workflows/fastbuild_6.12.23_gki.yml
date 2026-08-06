@@ -292,6 +292,17 @@ jobs:
             echo "已选择无内置KernelSU模式，跳过KernelSU配置..."
           fi
 
+      - name: 修复 KernelSU 头文件路径
+        if: github.event.inputs.ksu_type == 'ksu'
+        run: |
+          cd kernel_workspace
+          # 确保头文件复制到内核源码的 include 目录
+          cp -r ./KernelSU/include/* ./common/include/
+          # 或者如果 KernelSU 的 include 位于 drivers/kernelsu/include，则：
+          # cp -r ./KernelSU/drivers/kernelsu/include/* ./common/drivers/kernelsu/include/
+          # 同时确保编译时包含路径
+          echo 'ccflags-y += -I$(srctree)/include -I$(srctree)/drivers/kernelsu/include' >> ./common/drivers/kernelsu/Makefile
+
       - name: 应用 KernelSU & SUSFS 补丁
         if: inputs.susfs_enable
         run: |
